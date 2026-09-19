@@ -66,10 +66,10 @@ function HandlePage() {
   if (labels.length === 1) {
     return (
       <Panel
-        title={instance?.name || handle}
+        title={handle}
         lede={
           <>
-            An organization on this server, <span className="font-medium text-foreground">{handle}</span>. Its members sign in from the apps it uses.
+            An organization on {instance?.name ? <span className="font-medium text-foreground">{instance.name}</span> : "this server"}. Its members sign in from the apps it uses.
           </>
         }
         footer={identity}
@@ -82,7 +82,7 @@ function HandlePage() {
       lede={
         org ? (
           <>
-            A member of <span className="font-medium text-foreground">{instance?.name || org.handle}</span>.
+            A member of <span className="font-medium text-foreground">{org.handle}</span>.
           </>
         ) : (
           "An account on this server."
