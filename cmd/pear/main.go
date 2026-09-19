@@ -570,6 +570,21 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 	mux.PathPrefix("/ui/").Handler(uiHandler)
 
+	// Public front doors, rendered by the embedded UI: the instance's own page
+	// at its root, and a member's page at the root of their handle host. Both
+	// stay at "/" in the address bar; the SPA route is chosen by rewriting the
+	// path before the UI handler sees it. The member hosts also need the UI's
+	// assets, which the SPA references by absolute /ui/ paths.
+	uiRoute := func(route string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path = route
+			uiHandler.ServeHTTP(w, r)
+		}
+	}
+	mux.Host(domain).Path("/").HandlerFunc(uiRoute("/ui/at/"))
+	mux.Host("{handle:.+}." + hiveDomain).PathPrefix("/ui/").Handler(uiHandler)
+	mux.Host("{handle:.+}." + hiveDomain).Path("/").HandlerFunc(uiRoute("/ui/at/member"))
+
 	mux.PathPrefix("/").HandlerFunc(p2pServer.HandleLibp2p)
 
 	startupSpan.End()

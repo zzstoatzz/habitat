@@ -12,6 +12,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown, ShieldAlert } from "lucide-react";
 import { useState } from "react";
+import { Panel, useInstance } from "../-panel";
 
 type ConsentInfo = {
   scopes: string[];
@@ -97,6 +98,7 @@ function ConsentPage() {
     policyUri,
   } = Route.useLoaderData();
   const [showDetails, setShowDetails] = useState(false);
+  const instance = useInstance();
 
   const displayName = clientName || hostname(clientId) || clientId;
   const idHost = hostname(clientId);
@@ -104,10 +106,15 @@ function ConsentPage() {
   const identityMismatch = Boolean(idHost && uriHost && idHost !== uriHost);
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Authorize access</h1>
-
-      <Card>
+    <Panel
+      title={instance?.name || "Authorize"}
+      lede={
+        <>
+          <span className="font-medium text-foreground">{displayName}</span> wants to sign you in.
+        </>
+      }
+    >
+      <Card className="border-0 p-0 shadow-none">
         <CardHeader className="flex-row items-center gap-3">
           {logoUri && (
             <img
@@ -206,11 +213,13 @@ function ConsentPage() {
         </CardContent>
       </Card>
 
-      <form method="POST" action="/oauth/consent">
+      <form method="POST" action="/oauth/consent" className="mt-4">
         <fieldset className="flex flex-col gap-4">
-          <Button type="submit">Authorize</Button>
+          <Button type="submit" size="lg" className="w-full">
+            Continue
+          </Button>
         </fieldset>
       </form>
-    </div>
+    </Panel>
   );
 }

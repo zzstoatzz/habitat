@@ -1,13 +1,8 @@
-import {
-  Button,
-  Field,
-  FieldError,
-  FieldLabel,
-  Input,
-} from "internal/components/ui";
+import { Button, Field, FieldError, FieldLabel, Input } from "internal/components/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
+import { Panel, useInstance } from "../-panel";
 
 // Member password login page. pear redirects here (from the password login
 // provider's Authorize step) with the member's handle as a search param. The
@@ -26,6 +21,7 @@ type LoginMemberOutput = { callbackURL: string };
 
 function HabitatLoginPage() {
   const { handle } = Route.useSearch();
+  const instance = useInstance();
 
   const {
     register,
@@ -42,7 +38,7 @@ function HabitatLoginPage() {
         body: JSON.stringify({ handle: formHandle || handle, password }),
       });
       if (!res.ok) {
-        throw new Error((await res.text()) || "Login failed");
+        throw new Error((await res.text()) || "Sign in failed");
       }
       const { callbackURL } = (await res.json()) as LoginMemberOutput;
       window.location.href = callbackURL;
@@ -54,38 +50,49 @@ function HabitatLoginPage() {
   };
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-4">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
-      {handle && (
-        <p className="font-mono text-sm text-muted-foreground">{handle}</p>
-      )}
+    <Panel
+      title={instance?.name || "Sign in"}
+      lede={
+        handle ? (
+          <>
+            Sign in as <span className="font-medium text-foreground">{handle}</span>
+          </>
+        ) : (
+          "Sign in with your handle and password."
+        )
+      }
+    >
       <form onSubmit={handleSubmit(onSubmit)}>
         <fieldset disabled={isSubmitting} className="flex flex-col gap-4">
           {!handle && (
             <Field>
               <FieldLabel>Handle</FieldLabel>
               <Input
-                placeholder="handle"
+                placeholder="you.example.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
                 {...register("handle", { required: true })}
               />
-              <FieldError errors={[errors.password]} />
+              <FieldError errors={[errors.handle]} />
             </Field>
           )}
           <Field>
             <FieldLabel>Password</FieldLabel>
             <Input
               type="password"
-              placeholder="password"
+              autoComplete="current-password"
+              autoFocus
               {...register("password", { required: true })}
             />
             <FieldError errors={[errors.password]} />
           </Field>
           <FieldError errors={[errors.root]} />
-          <Button type="submit">
-            {isSubmitting ? "Signing in..." : "Sign in"}
+          <Button type="submit" size="lg" className="w-full">
+            {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </fieldset>
       </form>
-    </div>
+    </Panel>
   );
 }
