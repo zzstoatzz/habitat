@@ -114,7 +114,7 @@ function ConsentPage() {
         </>
       }
     >
-      <Card className="border-0 p-0 shadow-none">
+      <Card className="border-0 bg-transparent p-0 shadow-none ring-0">
         <CardHeader className="flex-row items-center gap-3">
           {logoUri && (
             <img
