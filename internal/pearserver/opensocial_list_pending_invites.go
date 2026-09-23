@@ -7,6 +7,7 @@ import (
 	opensocial_api "github.com/habitat-network/habitat/api/opensocial"
 	"github.com/habitat-network/habitat/internal/authn"
 	"github.com/habitat-network/habitat/internal/httpx"
+	"github.com/habitat-network/habitat/internal/opensocial"
 )
 
 // ListPendingInvites implements community.opensocial.listPendingInvites.
@@ -27,7 +28,7 @@ func (p *PearServer) ListPendingInvites(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	if !p.requireAdmin(ctx, w, org, credInfo.Subject) {
+	if !p.requireAction(ctx, w, org, credInfo.Subject, opensocial.ActionInvite) {
 		return
 	}
 	invites, err := p.opensocialStore.ListPendingInvites(ctx, org)
