@@ -1,7 +1,8 @@
-import { Button, Field, FieldLabel, Input } from "internal/components/ui";
+import { Button, Field, FieldError, FieldLabel, Input } from "internal/components/ui";
 import { createFileRoute } from "@tanstack/react-router";
-import { Unplug } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
+import { Panel } from "../-panel";
 
 type OrgProfile = {
   name: string;
@@ -15,12 +16,21 @@ type OpensocialLoginInfo = {
   logoUri: string;
 };
 
-// Opensocial org sign-in page. pear's authorization endpoint redirects here
-// when the identity being signed into is an opensocial org, rather than
-// starting a login provider directly. The admin enters their handle; the
-// same endpoint verifies their admin membership and, on success, redirects
-// on to their PDS to complete the login.
+const errorText: Record<string, string> = {
+  "not-admin": "That account is not an admin of this organization.",
+  "unknown-handle": "No account was found for that handle.",
+};
+
+// Opensocial org approval page. pear's authorization endpoint redirects here
+// when the identity being signed into is an opensocial org: an app is asking
+// for a session as the organization, and only an admin may grant one. The
+// admin enters their own handle; the same endpoint verifies their role and
+// sends them to their own PDS to prove who they are. A refused handle comes
+// back here with `error` set.
 export const Route = createFileRoute("/login/opensocial")({
+  validateSearch: z.object({
+    error: z.string().optional(),
+  }),
   loader: async (): Promise<OpensocialLoginInfo> => {
     const res = await fetch("/oauth/opensocial");
     if (!res.ok) throw new Error("Failed to load org profile");
@@ -29,59 +39,67 @@ export const Route = createFileRoute("/login/opensocial")({
   component: OpensocialLoginPage,
 });
 
+function hostname(uri: string): string | undefined {
+  try {
+    return new URL(uri).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
 function OpensocialLoginPage() {
   const { orgProfile, clientName, clientUri, logoUri } = Route.useLoaderData();
+  const { error } = Route.useSearch();
   const [submitting, setSubmitting] = useState(false);
 
-  const clientInfo = clientName || clientUri;
+  const appName = clientName || hostname(clientUri) || clientUri;
+  const appHost = clientUri ? hostname(clientUri) : undefined;
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-4">
-      <p>
-        Approve {clientInfo} access spaces in {orgProfile.name}
-      </p>
-      <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex min-w-0 flex-col items-center gap-1">
-          {logoUri && <img src={logoUri} alt="" className="h-8 w-8 rounded" />}
-          <p className="truncate font-medium">{clientName || clientUri}</p>
-          {clientName && (
-            <p className="truncate text-xs text-muted-foreground">
-              {clientUri}
-            </p>
-          )}
+    <Panel
+      title={orgProfile.name}
+      lede={
+        <>
+          <span className="font-medium text-foreground">{appName}</span> wants to act as this
+          organization.
+        </>
+      }
+      footer="Approving lets the app read the organization's spaces and write records as it, within the scopes it asked for. Only an admin can approve, and you sign in where your own account lives."
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          {logoUri && <img src={logoUri} alt="" className="h-10 w-10 rounded-lg object-cover" />}
+          <div className="flex min-w-0 flex-col">
+            <p className="truncate font-medium">{appName}</p>
+            {appHost && appHost !== appName && (
+              <p className="truncate text-xs text-muted-foreground">{appHost}</p>
+            )}
+          </div>
         </div>
-        <Unplug className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0">
-          <p className="truncate font-medium">{orgProfile.name}</p>
-          {orgProfile.description && (
-            <p className="truncate text-xs text-muted-foreground">
-              {orgProfile.description}
-            </p>
-          )}
-        </div>
+        {orgProfile.description && (
+          <p className="text-sm text-muted-foreground">{orgProfile.description}</p>
+        )}
+        <form method="POST" action="/oauth/opensocial" onSubmit={() => setSubmitting(true)}>
+          <fieldset disabled={submitting} className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel>Your handle</FieldLabel>
+              <Input
+                placeholder="you.example.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                autoFocus
+                name="handle"
+                required
+              />
+              {error && <FieldError errors={[{ message: errorText[error] ?? error }]} />}
+            </Field>
+            <Button type="submit" size="lg" className="w-full">
+              {submitting ? "Continuing…" : "Continue as an admin"}
+            </Button>
+          </fieldset>
+        </form>
       </div>
-      <p>Sign in as an admin of {orgProfile.name} to continue.</p>
-      <form
-        method="POST"
-        action="/oauth/opensocial"
-        onSubmit={() => setSubmitting(true)}
-      >
-        <fieldset className="flex flex-col gap-4">
-          <Field>
-            <FieldLabel>Handle</FieldLabel>
-            <Input
-              placeholder="handle"
-              autoFocus
-              name="handle"
-              required
-              readOnly={submitting}
-            />
-          </Field>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Continuing..." : "Continue"}
-          </Button>
-        </fieldset>
-      </form>
-    </div>
+    </Panel>
   );
 }

@@ -1592,7 +1592,8 @@ func TestHandleOpensocialRejectsNonAdmin(t *testing.T) {
 	postResp, err := server.Client().Do(postReq)
 	require.NoError(t, err)
 	require.NoError(t, postResp.Body.Close())
-	require.Equal(t, http.StatusUnauthorized, postResp.StatusCode)
+	require.Equal(t, http.StatusSeeOther, postResp.StatusCode)
+	require.Equal(t, opensocialPath+"?error=not-admin", postResp.Header.Get("Location"))
 
 	require.Empty(t, pds.LoginID, "login provider should never have been invoked")
 }

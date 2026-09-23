@@ -816,12 +816,12 @@ func (o *OAuthServer) HandleOpensocial(w http.ResponseWriter, r *http.Request) {
 	}
 	atID, err := syntax.ParseAtIdentifier(r.FormValue("handle"))
 	if err != nil {
-		httpx.WriteInvalidRequest(ctx, w, "invalid handle", err)
+		http.Redirect(w, r, opensocialPath+"?error=unknown-handle", http.StatusSeeOther)
 		return
 	}
 	memberID, err := o.directory.Lookup(ctx, atID)
 	if err != nil {
-		httpx.WriteInvalidRequest(ctx, w, "failed to resolve handle", err)
+		http.Redirect(w, r, opensocialPath+"?error=unknown-handle", http.StatusSeeOther)
 		return
 	}
 	roles, err := o.opensocialStore.GetUserRoles(ctx, orgDID, memberID.DID)
@@ -830,7 +830,7 @@ func (o *OAuthServer) HandleOpensocial(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !slices.Contains(roles, opensocial.AdminRoleRkey) {
-		httpx.WriteUnauthorized(ctx, w, "not an admin of this org")
+		http.Redirect(w, r, opensocialPath+"?error=not-admin", http.StatusSeeOther)
 		return
 	}
 	redirectURL, providerState, err := o.loginRouter.Pds.Authorize(ctx, memberID.DID.String())
