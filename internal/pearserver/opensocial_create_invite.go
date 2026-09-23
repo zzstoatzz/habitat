@@ -30,7 +30,7 @@ func (p *PearServer) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !p.requireAdmin(ctx, w, org, credInfo.Subject) {
+	if !p.requireAction(ctx, w, org, credInfo.Subject, opensocial.ActionInvite) {
 		return
 	}
 	invitee, ok := httpx.ParseDIDInput(ctx, w, input.Invitee, "invitee")
